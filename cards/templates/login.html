@@ -1,0 +1,152 @@
+<div class="modal fade" id="login" tabindex="-1" role="dialog" aria-labelledby="Login" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title" id="myModalLabel">Login</h4>
+            </div>
+            <div class="modal-body">
+                <form>
+                    <p id="status" class="status">Enter username and password</p>
+                    <input type="text" id="username" name="username" placeholder="Username or email"><br />
+                    <input type="password" id="password" name="password" placeholder="Password"><br />
+                    {% csrf_token %}
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" data-dismiss="modal" aria-hidden="true">Cancel</button>
+                <button id="submit_button" class="btn btn-primary">Login</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// using jQuery
+function getCookie(name) {
+    var cookieValue = null;
+    if (document.cookie && document.cookie != '') {
+        var cookies = document.cookie.split(';');
+        for (var i = 0; i < cookies.length; i++) {
+            var cookie = jQuery.trim(cookies[i]);
+            // Does this cookie string begin with the name we want?
+            if (cookie.substring(0, name.length + 1) == (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+var csrftoken = getCookie('csrftoken');
+
+function csrfSafeMethod(method) {
+    // these HTTP methods do not require CSRF protection
+    return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
+}
+function sameOrigin(url) {
+    // test that a given url is a same-origin URL
+    // url could be relative or scheme relative or absolute
+    var host = document.location.host; // host + port
+    var protocol = document.location.protocol;
+    var sr_origin = '//' + host;
+    var origin = protocol + sr_origin;
+    // Allow absolute or scheme relative URLs to same origin
+    return (url == origin || url.slice(0, origin.length + 1) == origin + '/') ||
+        (url == sr_origin || url.slice(0, sr_origin.length + 1) == sr_origin + '/') ||
+        // or any other URL that isn't scheme relative or absolute i.e relative.
+        !(/^(\/\/|http:|https:).*/.test(url));
+}
+$.ajaxSetup({
+    beforeSend: function(xhr, settings) {
+        if (!csrfSafeMethod(settings.type) && sameOrigin(settings.url)) {
+            // Send the token to same-origin, relative URLs only.
+            // Send the token only if the method warrants CSRF protection
+            // Using the CSRFToken value acquired earlier
+            xhr.setRequestHeader("X-CSRFToken", csrftoken);
+        }
+    }
+});
+
+
+    $(function()
+    {
+        $("#username").keyup(function(event)
+        {
+            if(event.keyCode == 13)
+            {
+                $("#submit_button").click();
+            }
+        });
+
+        $("#password").keyup(function(event)
+        {
+            if(event.keyCode == 13)
+            {
+                $("#submit_button").click();
+            }
+        });
+
+        $("#login_btn").click(function(e)
+        {
+            $("#login").modal("toggle");
+        });
+
+
+        $("#submit_button").click(function(e)
+        {
+            $.ajax(
+            {
+                type:"POST",
+                url:"/login",
+                data: $('form').serialize(),
+                success: function(msg)
+                {
+                    auth = jQuery.parseJSON(msg)
+                    if (auth.authenticated)
+                    {
+                        $("#user").html("Logged in as " + auth.username);
+                        $("#login").modal("toggle");
+                        $("#login_btn").addClass("hide");
+                        $("#logout_btn").removeClass("hide");
+                    }
+                    else
+                    {
+                        $("#status").html("Incorrect username or password");
+                        $("#status").addClass("error");
+                        $("#username").val("");
+                        $("#password").val("");
+                    }
+                },
+            });
+        });
+
+        $("#edit_btn").click(function(e)
+        {
+            $user = "{{ user.username }}";
+
+            if (!$user)
+            {
+                $("#login").modal("toggle");
+            }
+
+        });
+
+        $("#logout_btn").click(function(e)
+        {
+            $.ajax(
+            {
+                type:"GET",
+                url:"/logout",
+                success: function(logout)
+                {
+                    $("#user").html("Not Logged In");
+                    $("#logout_btn").addClass("hide");
+                    $("#login_btn").removeClass("hide");
+                    $("#username").val("");
+                    $("#password").val("");
+                }
+            });
+        });
+    });
+</script>
